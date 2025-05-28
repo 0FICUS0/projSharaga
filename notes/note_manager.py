@@ -1,5 +1,5 @@
 from database.storage import Storage  # импортируем слой хранения
-from projSharaga.crypto_manager import CryptoManager  # импортируем шифратор
+from crypto.crypto_manager import CryptoManager # импортируем шифратор
 
 class NoteManager:
     def __init__(self, master_password: str):
