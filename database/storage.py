@@ -1,16 +1,42 @@
+import sqlite3
+
 class Storage:
-    def __init__(self, db_path):
+    def __init__(self, db_path="notes.db"):
         self.db_path = db_path
-        # TODO: инициализация БД
+        self._init_db()
+
+    def _init_db(self):
+        with sqlite3.connect(self.db_path) as conn:
+            c = conn.cursor()
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS notes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    content TEXT NOT NULL
+                )
+            ''')
+            conn.commit()
 
     def add_note(self, title, content):
-        pass
+        with sqlite3.connect(self.db_path) as conn:
+            c = conn.cursor()
+            c.execute("INSERT INTO notes (title, content) VALUES (?, ?)", (title, content))
+            conn.commit()
 
     def get_all_notes(self):
-        pass
+        with sqlite3.connect(self.db_path) as conn:
+            c = conn.cursor()
+            c.execute("SELECT id, title, content FROM notes")
+            return c.fetchall()
 
     def update_note(self, note_id, new_title, new_content):
-        pass
+        with sqlite3.connect(self.db_path) as conn:
+            c = conn.cursor()
+            c.execute("UPDATE notes SET title = ?, content = ? WHERE id = ?", (new_title, new_content, note_id))
+            conn.commit()
 
     def delete_note(self, note_id):
-        pass
+        with sqlite3.connect(self.db_path) as conn:
+            c = conn.cursor()
+            c.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+            conn.commit()
