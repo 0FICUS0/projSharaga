@@ -1,2 +1,4 @@
-print("Zalupa228")
-print("Zalupa")
+from andrew.gui import start_app
+
+if __name__ == "__main__":
+    start_app()
