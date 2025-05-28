@@ -3,6 +3,8 @@ from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QListWidget, QTextEdit, QLineEdit, QLabel, QMessageBox, QInputDialog
 )
+from PyQt5.QtCore import Qt
+
 
 # пока нет логики — фейковые данные
 notes = {}
@@ -79,10 +81,12 @@ class NotesWindow(QWidget):
         self.setLayout(layout)
         self.refresh_notes()
 
+
     def refresh_notes(self):
         self.notes_list.clear()
         for title in notes:
             self.notes_list.addItem(title)
+
 
     def load_note(self):
         selected = self.notes_list.currentItem()
@@ -91,11 +95,20 @@ class NotesWindow(QWidget):
             content = notes.get(title, "")
             self.text_edit.setText(content)
 
+
     def new_note(self):
         title, ok = QInputDialog.getText(self, "New Note", "Enter note title:")
         if ok and title:
             notes[title] = ""
             self.refresh_notes()
+
+        # Выбрать новую заметку и дать писать текст сразу
+        items = self.notes_list.findItems(title, Qt.MatchExactly)
+        if items:
+            self.notes_list.setCurrentItem(items[0])
+            self.text_edit.clear()
+            self.text_edit.setFocus()
+
 
     def save_note(self):
         selected = self.notes_list.currentItem()
@@ -104,6 +117,7 @@ class NotesWindow(QWidget):
             notes[title] = self.text_edit.toPlainText()
         else:
             QMessageBox.warning(self, "No note selected", "Please select a note to save.")
+            
 
     def delete_note(self):
         selected = self.notes_list.currentItem()
