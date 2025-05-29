@@ -1,36 +1,32 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox, QMainWindow
 import sys
 
-class LoginWindow(QWidget):
-    def __init__(self):
+class LoginWindow(QMainWindow):
+    def __init__(self, on_login_success):
         super().__init__()
-        self.setWindowTitle("Enter Master Password")
-        self.setGeometry(300, 300, 300, 150)
-        layout = QVBoxLayout()
+        self.on_login_success = on_login_success
 
-        self.label = QLabel("Master Password:")
+        self.setWindowTitle("Вход по мастер-паролю")
+
         self.input = QLineEdit()
         self.input.setEchoMode(QLineEdit.Password)
-        self.btn = QPushButton("Login")
-        self.btn.clicked.connect(self.check_password)
 
+        self.label = QLabel("Введите мастер-пароль:")
+
+        self.button = QPushButton("Войти")
+        self.button.clicked.connect(self.try_login)
+
+        layout = QVBoxLayout()
         layout.addWidget(self.label)
         layout.addWidget(self.input)
-        layout.addWidget(self.btn)
-        self.setLayout(layout)
+        layout.addWidget(self.button)
 
-    def check_password(self):
-        pw = self.input.text()
-        # 🔴 Пока проверка заглушка:
-        if pw == "test":  # потом заменим на настоящую логику
-            QMessageBox.information(self, "Success", "Correct password!")
-            # Тут откроется основное окно потом
-        else:
-            QMessageBox.critical(self, "Error", "Wrong password!")
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
 
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = LoginWindow()
-    window.show()
-    sys.exit(app.exec_())
+    def try_login(self):
+        password = self.input.text()
+        # тут можно добавить проверку пароля, пока просто передаём его
+        self.on_login_success(password)
+        self.close()
