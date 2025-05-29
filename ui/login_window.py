@@ -27,6 +27,10 @@ class LoginWindow(QMainWindow):
 
     def try_login(self):
         password = self.input.text()
-        # тут можно добавить проверку пароля, пока просто передаём его
-        self.on_login_success(password)
-        self.close()
+
+        # 👉 Пример жёстко заданного пароля
+        if password == "1234":
+            self.on_login_success(password)
+            self.close()
+        else:
+            QMessageBox.warning(self, "Ошибка", "Неверный мастер-пароль!")
