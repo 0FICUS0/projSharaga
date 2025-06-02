@@ -24,10 +24,13 @@ class Storage:
             conn.commit()
 
     def get_all_notes(self):
-        with sqlite3.connect(self.db_path) as conn:
-            c = conn.cursor()
-            c.execute("SELECT id, title, content FROM notes")
-            return c.fetchall()
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, title, content FROM notes")
+        rows = cursor.fetchall()
+        conn.close()
+        return [{'id': row[0], 'title': row[1], 'content': row[2]} for row in rows]
+
 
     def update_note(self, note_id, new_title, new_content):
         with sqlite3.connect(self.db_path) as conn:

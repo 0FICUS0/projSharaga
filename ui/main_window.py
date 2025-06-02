@@ -1,6 +1,5 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QListWidget, QTextEdit, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QMessageBox
 
-print("load_note called")
 
 class MainWindow(QMainWindow):
     def __init__(self, note_manager):
@@ -48,43 +47,44 @@ class MainWindow(QMainWindow):
         # Загрузим заметки
         self.refresh_notes()
 
-        def refresh_notes(self):
-            self.note_list.clear()
-            self.notes = self.note_manager.get_all_notes()
-            for note in self.notes:
-                self.note_list.addItem(note['title'])
+    def refresh_notes(self):
+        self.note_list.clear()
+        self.notes = self.note_manager.get_all_notes()
+        for note in self.notes:
+            self.note_list.addItem(note['title'])
 
-        def load_note(self, item):
-            index = self.note_list.row(item)
-            note = self.notes[index]
-            self.current_note_id = note["id"]
-            self.title_edit.setText(note["title"])
-            self.text_edit.setPlainText(note["content"])
+    def load_note(self, item):
+        print("loadnote")
+        #index = self.note_list.row(item)
+        #note = self.notes[index]
+        #self.current_note_id = note["id"]
+        #self.title_edit.setText(note["title"])
+        #self.text_edit.setPlainText(note["content"])
 
-        def create_note(self):
+    def create_note(self):
+        self.title_edit.clear()
+        self.text_edit.clear()
+        self.current_note_id = None
+
+    def save_note(self):
+        title = self.title_edit.text()
+        content = self.text_edit.toPlainText()
+
+        if not title.strip():
+            QMessageBox.warning(self, "Ошибка", "Заголовок не может быть пустым.")
+            return
+
+        if self.current_note_id is None:
+            self.note_manager.add_note(title, content)
+        else:
+            self.note_manager.edit_note(self.current_note_id, title, content)
+
+        self.refresh_notes()
+
+    def delete_note(self):
+        if self.current_note_id is not None:
+            self.note_manager.delete_note(self.current_note_id)
+            self.current_note_id = None
             self.title_edit.clear()
             self.text_edit.clear()
-            self.current_note_id = None
-
-        def save_note(self):
-            title = self.title_edit.text()
-            content = self.text_edit.toPlainText()
-
-            if not title.strip():
-                QMessageBox.warning(self, "Ошибка", "Заголовок не может быть пустым.")
-                return
-
-            if self.current_note_id is None:
-                self.note_manager.add_note(title, content)
-            else:
-                self.note_manager.edit_note(self.current_note_id, title, content)
-
             self.refresh_notes()
-
-        def delete_note(self):
-            if self.current_note_id is not None:
-                self.note_manager.delete_note(self.current_note_id)
-                self.current_note_id = None
-                self.title_edit.clear()
-                self.text_edit.clear()
-                self.refresh_notes()
