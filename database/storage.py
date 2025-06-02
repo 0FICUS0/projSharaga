@@ -32,7 +32,7 @@ class Storage:
         return [{'id': row[0], 'title': row[1], 'content': row[2]} for row in rows]
 
 
-    def update_note(self, note_id, new_title, new_content):
+    def edit_note(self, note_id, new_title, new_content):
         with sqlite3.connect(self.db_path) as conn:
             c = conn.cursor()
             c.execute("UPDATE notes SET title = ?, content = ? WHERE id = ?", (new_title, new_content, note_id))
@@ -43,3 +43,4 @@ class Storage:
             c = conn.cursor()
             c.execute("DELETE FROM notes WHERE id = ?", (note_id,))
             conn.commit()
+

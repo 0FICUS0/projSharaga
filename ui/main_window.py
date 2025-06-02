@@ -43,6 +43,7 @@ class MainWindow(QMainWindow):
         self.create_button.clicked.connect(self.create_note)
         self.save_button.clicked.connect(self.save_note)
         self.delete_button.clicked.connect(self.delete_note)
+        
 
         # Загрузим заметки
         self.refresh_notes()
@@ -54,12 +55,11 @@ class MainWindow(QMainWindow):
             self.note_list.addItem(note['title'])
 
     def load_note(self, item):
-        print("loadnote")
-        #index = self.note_list.row(item)
-        #note = self.notes[index]
-        #self.current_note_id = note["id"]
-        #self.title_edit.setText(note["title"])
-        #self.text_edit.setPlainText(note["content"])
+        index = self.note_list.row(item)
+        note = self.notes[index]
+        self.current_note_id = note["id"]
+        self.title_edit.setText(note["title"])
+        self.text_edit.setPlainText(note["content"])
 
     def create_note(self):
         self.title_edit.clear()
