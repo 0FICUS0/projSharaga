@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QApplication
 from ui.login_window import LoginWindow
 from ui.main_window import MainWindow
 from notes.note_manager import NoteManager
+from users.user_manager import UserManager
 
 windows = {}
 
@@ -14,14 +15,14 @@ def main():
     app = QApplication(sys.argv)
 
     # Callback при успешном вводе пароля
-    def handle_login(master_password):
-        note_manager = NoteManager(master_password)
+    def handle_login(username, password):
+        note_manager = NoteManager(password, username=username)
         windows['main'] = MainWindow(note_manager)
         windows['main'].show()
-        
 
-        windows['main'] = MainWindow(NoteManager(master_password))
-        windows['main'].show()
+        windows['login'] = LoginWindow(on_login_success=handle_login)
+        windows['login'].show()
+
 
 
         

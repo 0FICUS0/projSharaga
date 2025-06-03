@@ -4,10 +4,11 @@ from cryptography.hazmat.primitives import hashes  # для хешировани
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC  # алгоритм KDF
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes  # для AES-шифрования
 from cryptography.hazmat.backends import default_backend  # стандартный криптографический бэкенд
+from users.user_manager import UserManager
 
 class CryptoManager:
     def __init__(self, password: str):
-        self.password = password.encode()  # мастер-пароль в байтах
+        self.user_manager = UserManager(password)  # мастер-пароль в байтах
         self.backend = default_backend()  # бэкенд для криптоопераций
 
     def _derive_key(self, salt: bytes) -> bytes:

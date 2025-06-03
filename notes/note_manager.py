@@ -1,11 +1,16 @@
+import os
 from database.storage import Storage  # импортируем слой хранения
 from crypto.crypto_manager import CryptoManager # импортируем шифратор
 
 class NoteManager:
-    def __init__(self, master_password: str):
-        # Инициализация менеджера заметок
-        self.crypto = CryptoManager(master_password)  # создаём шифратор с мастер-паролем
-        self.storage = Storage()  # создаём объект хранения (SQLite)
+    def __init__(self, password: str, username: str = "default"):
+        self.username = username
+        self.crypto = CryptoManager(password=password)
+
+        # создаём путь к БД конкретного пользователя
+        db_path = f"data/{self.username}_notes.db"
+        os.makedirs("data", exist_ok=True)
+        self.storage = Storage(db_path=db_path)
 
     def add_note(self, title: str, content: str):
         # Шифруем содержимое заметки
