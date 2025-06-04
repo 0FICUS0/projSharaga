@@ -1,81 +1,80 @@
-import os
 import sqlite3
 import hashlib
+import os
 
 class UserManager:
-    def __init__(self, users_db_path='users/users.db', db_dir='databases'):
-        self.users_db_path = users_db_path
-        self.db_dir = db_dir
-        os.makedirs(os.path.dirname(users_db_path), exist_ok=True)
-        os.makedirs(db_dir, exist_ok=True)
-        self._init_users_table()
+    def __init__(self, user_db_path="users/users.db"):
+        self.user_db_path = user_db_path
+        os.makedirs(os.path.dirname(user_db_path), exist_ok=True)
+        self.conn = sqlite3.connect(user_db_path)
+        self._create_table()
+        self._ensure_admin_exists()
 
-    def _init_users_table(self):
-        with sqlite3.connect(self.users_db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
-                    password_hash TEXT NOT NULL,
-                    is_admin INTEGER DEFAULT 0,
-                    db_path TEXT
-                )
-            ''')
-            conn.commit()
+    def _create_table(self):
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                username TEXT PRIMARY KEY,
+                password_hash TEXT NOT NULL,
+                is_admin INTEGER DEFAULT 0
+            )
+        """)
+        self.conn.commit()
 
-    def _hash_password(self, password):
+    def _hash_password(self, password: str) -> str:
         return hashlib.sha256(password.encode()).hexdigest()
 
-    def add_user(self, username, password, is_admin=False, db_path=None):
-        if db_path is None:
-            db_path = os.path.join(self.db_dir, f"{username}.db")
-        password_hash = self._hash_password(password)
+    def _ensure_admin_exists(self):
+        cur = self.conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM users WHERE username = 'admin'")
+        if cur.fetchone()[0] == 0:
+            self.add_user('admin', 'admin', is_admin=True)
+
+    def add_user(self, username: str, password: str, is_admin=False):
         try:
-            with sqlite3.connect(self.users_db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    INSERT INTO users (username, password_hash, is_admin, db_path)
-                    VALUES (?, ?, ?, ?)
-                ''', (username, password_hash, int(is_admin), db_path))
-                conn.commit()
+            self.conn.execute(
+                "INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, ?)",
+                (username, self._hash_password(password), int(is_admin))
+            )
+            self.conn.commit()
             return True
         except sqlite3.IntegrityError:
-            return False  # Пользователь уже существует
+            return False
 
-    def delete_user(self, username):
-        with sqlite3.connect(self.users_db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT db_path FROM users WHERE username = ?', (username,))
-            row = cursor.fetchone()
-            if row:
-                db_path = row[0]
-                if os.path.exists(db_path):
-                    os.remove(db_path)
-            cursor.execute('DELETE FROM users WHERE username = ?', (username,))
-            conn.commit()
+    def delete_user(self, username: str):
+        self.conn.execute("DELETE FROM users WHERE username = ?", (username,))
+        self.conn.commit()
+        db_path = f"data/{username}.db"
+        if os.path.exists(db_path):
+            os.remove(db_path)
 
-    def authenticate(self, username, password):
-        password_hash = self._hash_password(password)
-        with sqlite3.connect(self.users_db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT username, is_admin, db_path FROM users
-                WHERE username = ? AND password_hash = ?
-            ''', (username, password_hash))
-            row = cursor.fetchone()
-            if row:
-                return {
-                    'username': row[0],
-                    'is_admin': bool(row[1]),
-                    'db_path': row[2]
-                }
-            return None
-
-
-if __name__ == "__main__":
-    um = UserManager()
-    if um.add_user("admin", "adminpass", is_admin=True, db_path=os.path.join("databases", "shared.db")):
-        print("Admin user created")
-    else:
-        print("Admin already exists")
+    def authenticate(self, username: str, password: str) -> str | None:
+        cur = self.conn.cursor()
+        cur.execute("SELECT password_hash FROM users WHERE username = ?", (username,))
+        row = cur.fetchone()
+        if row and row[0] == self._hash_password(password):
+            return f"data/{username}.db"
+        return None
+    
+    def is_admin(self, username: str) -> bool:
+        cur = self.conn.cursor()
+        cur.execute("SELECT is_admin FROM users WHERE username = ?", (username,))
+        row = cur.fetchone()
+        return bool(row[0]) if row else False
+    
+    def get_user(self, username: str) -> dict | None:
+        cur = self.conn.cursor()
+        cur.execute("SELECT username, password_hash, is_admin FROM users WHERE username = ?", (username,))
+        row = cur.fetchone()
+        if row:
+            return {
+                "username": row[0],
+                "password_hash": row[1],
+                "is_admin": bool(row[2])
+            }
+        return None
+    
+    def get_all_users(self) -> list:
+        cur = self.conn.cursor()
+        cur.execute("SELECT username, is_admin FROM users")
+        rows = cur.fetchall()
+        return [{'username': row[0], 'is_admin': bool(row[1])} for row in rows]

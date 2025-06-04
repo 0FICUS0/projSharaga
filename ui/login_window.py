@@ -1,36 +1,47 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox, QMainWindow
-import sys
+from PyQt5.QtWidgets import QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox
+from PyQt5.QtCore import Qt
+from users.user_manager import UserManager
 
-class LoginWindow(QMainWindow):
-    def __init__(self, on_login_success):
+class LoginWindow(QWidget):
+    def __init__(self, user_manager, on_login_success, on_admin_login, on_register):
         super().__init__()
+        self.setWindowTitle("Вход в систему")
+        self.user_manager = user_manager
         self.on_login_success = on_login_success
+        self.on_admin_login = on_admin_login
+        self.on_register = on_register
 
-        self.setWindowTitle("Вход по мастер-паролю")
+        self.username_label = QLabel("Логин:")
+        self.username_input = QLineEdit()
 
-        self.input = QLineEdit()
-        self.input.setEchoMode(QLineEdit.Password)
+        self.password_label = QLabel("Пароль:")
+        self.password_input = QLineEdit()
+        self.password_input.setEchoMode(QLineEdit.Password)
 
-        self.label = QLabel("Введите мастер-пароль:")
+        self.login_button = QPushButton("Войти")
+        self.login_button.clicked.connect(self.try_login)
 
-        self.button = QPushButton("Войти")
-        self.button.clicked.connect(self.try_login)
+        self.register_button = QPushButton("Зарегистрироваться")
+        self.register_button.clicked.connect(self.on_register)
 
         layout = QVBoxLayout()
-        layout.addWidget(self.label)
-        layout.addWidget(self.input)
-        layout.addWidget(self.button)
+        layout.addWidget(self.username_label)
+        layout.addWidget(self.username_input)
+        layout.addWidget(self.password_label)
+        layout.addWidget(self.password_input)
+        layout.addWidget(self.login_button)
+        layout.addWidget(self.register_button)
 
-        container = QWidget()
-        container.setLayout(layout)
-        self.setCentralWidget(container)
+        self.setLayout(layout)
 
     def try_login(self):
-        password = self.input.text()
+        username = self.username_input.text()
+        password = self.password_input.text()
 
-        # 👉 Пример жёстко заданного пароля
-        if password == "1234":
-            self.on_login_success(password)
-            self.close()
+        if self.user_manager.authenticate(username, password):
+            if self.user_manager.is_admin(username):
+                self.on_admin_login()
+            else:
+                self.on_login_success(username, password)
         else:
-            QMessageBox.warning(self, "Ошибка", "Неверный мастер-пароль!")
+            QMessageBox.warning(self, "Ошибка", "Неверный логин или пароль")
