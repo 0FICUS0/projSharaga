@@ -1,112 +1,150 @@
 from PyQt5.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QListWidget, QTextEdit, QLineEdit, QLabel, QMessageBox, QInputDialog, QComboBox
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QTextEdit,
+    QLineEdit, QLabel, QSplitter, QSizePolicy, QFrame
 )
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPalette, QColor, QFont
 
-class MainWindow(QMainWindow):
+
+class MainWindow(QWidget):
     def __init__(self, note_manager, username):
         super().__init__()
         self.note_manager = note_manager
         self.username = username
-        self.notes = []
+        self.setWindowTitle("Encrypted Notes - Obsidian Style")
+        self.resize(1000, 600)
 
-        self.setWindowTitle(f"Заметки пользователя: {username}")
-        main_widget = QWidget()
-        self.setCentralWidget(main_widget)
-        main_layout = QVBoxLayout()
-        main_widget.setLayout(main_layout)
+        self.set_dark_theme()
 
-        # Поиск и сортировка
-        search_layout = QHBoxLayout()
+        # Панель с заметками
+        self.notes_list = QListWidget()
+        self.notes_list.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self.notes_list.setMinimumWidth(250)
+        self.notes_list.itemClicked.connect(self.display_note)
+
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Поиск...")
+        self.search_input.setPlaceholderText("🔍 Поиск...")
         self.search_input.textChanged.connect(self.search_notes)
-        self.sort_box = QComboBox()
-        self.sort_box.addItems(["По заголовку (А-Я)", "По заголовку (Я-А)"])
-        self.sort_box.currentIndexChanged.connect(self.sort_notes)
-        search_layout.addWidget(self.search_input)
-        search_layout.addWidget(self.sort_box)
-        main_layout.addLayout(search_layout)
 
-        # Список заметок
-        self.note_list = QListWidget()
-        self.note_list.itemClicked.connect(self.load_note)
-        main_layout.addWidget(self.note_list)
+        # Левая колонка (поиск + список)
+        self.left_panel = QVBoxLayout()
+        self.left_panel.addWidget(self.search_input)
+        self.left_panel.addWidget(self.notes_list)
 
-        # Кнопки действий
-        button_layout = QHBoxLayout()
-        self.add_button = QPushButton("Создать")
-        self.save_button = QPushButton("Сохранить")
-        self.delete_button = QPushButton("Удалить")
-        button_layout.addWidget(self.add_button)
-        button_layout.addWidget(self.save_button)
-        button_layout.addWidget(self.delete_button)
-        main_layout.addLayout(button_layout)
+        left_widget = QWidget()
+        left_widget.setLayout(self.left_panel)
 
-        self.add_button.clicked.connect(self.add_note)
+        # Редактор
+        self.title_input = QLineEdit()
+        self.title_input.setPlaceholderText("Заголовок заметки...")
+        self.title_input.setFont(QFont("Segoe UI", 12, QFont.Bold))
+
+        self.text_edit = QTextEdit()
+        self.text_edit.setPlaceholderText("Содержимое заметки...")
+
+        # Верхние кнопки
+        self.save_button = QPushButton("💾 Сохранить")
+        self.delete_button = QPushButton("🗑️ Удалить")
+        self.new_button = QPushButton("➕ Новая")
+
         self.save_button.clicked.connect(self.save_note)
         self.delete_button.clicked.connect(self.delete_note)
+        self.new_button.clicked.connect(self.new_note)
 
-        # Поле редактирования текста
-        self.text_edit = QTextEdit()
-        main_layout.addWidget(self.text_edit)
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addWidget(self.new_button)
+        buttons_layout.addStretch()
+        buttons_layout.addWidget(self.save_button)
+        buttons_layout.addWidget(self.delete_button)
 
-        self.selected_note_id = None
-        self.refresh_notes()
+        # Центральная область
+        self.editor_layout = QVBoxLayout()
+        self.editor_layout.addWidget(self.title_input)
+        self.editor_layout.addWidget(self.text_edit)
+        self.editor_layout.addLayout(buttons_layout)
 
-    def refresh_notes(self):
-        self.notes = self.note_manager.get_all_notes()
-        self.show_notes(self.notes)
+        right_widget = QWidget()
+        right_widget.setLayout(self.editor_layout)
 
-    def show_notes(self, notes):
-        self.note_list.clear()
-        for note in notes:
-            self.note_list.addItem(note['title'])
+        # Разделение экрана
+        splitter = QSplitter(Qt.Horizontal)
+        splitter.addWidget(left_widget)
+        splitter.addWidget(right_widget)
+        splitter.setStretchFactor(1, 1)
 
-    def search_notes(self):
-        query = self.search_input.text()
-        if query:
-            results = self.note_manager.search_notes(query)
-            self.show_notes(results)
-        else:
-            self.refresh_notes()
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(splitter)
+        self.setLayout(main_layout)
 
-    def sort_notes(self):
-        current = self.sort_box.currentIndex()
-        if current == 0:
-            self.notes.sort(key=lambda n: n['title'])
-        else:
-            self.notes.sort(key=lambda n: n['title'], reverse=True)
-        self.show_notes(self.notes)
+        self.current_note_id = None
+        self.refresh_notes_list()
 
-    def load_note(self, item):
+    def set_dark_theme(self):
+        palette = QPalette()
+        palette.setColor(QPalette.Window, QColor(30, 30, 30))
+        palette.setColor(QPalette.WindowText, Qt.white)
+        palette.setColor(QPalette.Base, QColor(40, 40, 40))
+        palette.setColor(QPalette.Text, Qt.white)
+        palette.setColor(QPalette.Button, QColor(60, 60, 60))
+        palette.setColor(QPalette.ButtonText, Qt.white)
+        palette.setColor(QPalette.Highlight, QColor(100, 100, 255))
+        palette.setColor(QPalette.HighlightedText, Qt.black)
+        self.setPalette(palette)
+        self.setStyleSheet("""
+            QListWidget, QTextEdit, QLineEdit, QPushButton {
+                font-size: 14px;
+                border: none;
+                padding: 6px;
+            }
+            QPushButton {
+                background-color: #444;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #555;
+            }
+        """)
+
+    # --- Логика редактирования
+    def refresh_notes_list(self):
+        self.notes_list.clear()
+        for note in self.note_manager.get_all_notes():
+            self.notes_list.addItem(note['title'])
+
+    def display_note(self, item):
         title = item.text()
-        for note in self.notes:
-            if note['title'] == title:
-                self.text_edit.setText(note['content'])
-                self.selected_note_id = note['id']
-                break
-
-    def add_note(self):
-        title, ok = QInputDialog.getText(self, "Новая заметка", "Введите заголовок:")
-        if ok and title:
-            self.note_manager.add_note(title, "")
-            self.refresh_notes()
+        note = self.note_manager.get_note_by_title(title)
+        if note:
+            self.current_note_id = note['id']
+            self.title_input.setText(note['title'])
+            self.text_edit.setText(note['content'])
 
     def save_note(self):
-        if self.selected_note_id is None:
-            QMessageBox.warning(self, "Нет заметки", "Выберите заметку для сохранения")
-            return
-        title = self.note_list.currentItem().text()
+        title = self.title_input.text().strip()
         content = self.text_edit.toPlainText()
-        self.note_manager.edit_note(self.selected_note_id, title, content)
-        self.refresh_notes()
+        if self.current_note_id:
+            self.note_manager.update_note(self.current_note_id, title, content)
+        else:
+            self.note_manager.create_note(title, content)
+        self.refresh_notes_list()
+        self.clear_editor()
 
     def delete_note(self):
-        if self.selected_note_id is None:
-            QMessageBox.warning(self, "Нет заметки", "Выберите заметку для удаления")
-            return
-        self.note_manager.delete_note(self.selected_note_id)
+        if self.current_note_id:
+            self.note_manager.delete_note(self.current_note_id)
+            self.refresh_notes_list()
+            self.clear_editor()
+
+    def new_note(self):
+        self.current_note_id = None
+        self.clear_editor()
+
+    def clear_editor(self):
+        self.title_input.clear()
         self.text_edit.clear()
-        self.selected_note_id = None
-        self.refresh_notes()
+
+    def search_notes(self, query):
+        results = self.note_manager.search_notes(query)
+        self.notes_list.clear()
+        for note in results:
+            self.notes_list.addItem(note['title'])
