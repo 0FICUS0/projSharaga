@@ -8,9 +8,10 @@ from PyQt5.QtGui import QPalette, QColor, QFont
 
 
 class MainWindow(QWidget):
-    def __init__(self, note_manager, username):
+    def __init__(self, note_manager, username, on_close_callback):
         super().__init__()
         self.note_manager = note_manager
+        self.on_close_callback = on_close_callback
         self.username = username
         self.setWindowTitle("Encrypted Notes - Obsidian Style")
         self.resize(1000, 600)
@@ -179,4 +180,10 @@ class MainWindow(QWidget):
             item = QListWidgetItem(note['title'])
             item.setData(Qt.UserRole, note['id'])  # тоже сохраняем ID
             self.notes_list.addItem(item)
+
+
+    def closeEvent(self, event):
+        self.on_close_callback()
+        event.accept()
+
 

@@ -9,7 +9,7 @@ from notes.note_manager import NoteManager
 
 
 class AdminPanel(QWidget):
-    def __init__(self, master_password):
+    def __init__(self, master_password, on_close_callback):
         super().__init__()
         self.setWindowTitle("Админ-панель")
         self.resize(1000, 600)
@@ -18,6 +18,7 @@ class AdminPanel(QWidget):
         self.user_manager = UserManager(master_key=master_password)
         self.note_manager_cache = {}  # кэш NoteManager'ов
         self.users_data = {}  # username -> encrypted_password
+        self.on_close_callback = on_close_callback
 
         self.set_dark_theme()
 
@@ -151,4 +152,10 @@ class AdminPanel(QWidget):
         except Exception as e:
             self.info_label.setText(f"[Ошибка] Не удалось загрузить данные: {e}")
             self.notes_view.clear()
+
+
+    def closeEvent(self, event):
+        self.on_close_callback()
+        event.accept()
+
 
