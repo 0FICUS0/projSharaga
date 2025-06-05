@@ -40,7 +40,7 @@ class LoginWindow(QWidget):
 
         if self.user_manager.authenticate(username, password):
             if self.user_manager.is_admin(username):
-                self.on_admin_login()
+                self.on_admin_login(username, password)
             else:
                 self.on_login_success(username, password)
         else:

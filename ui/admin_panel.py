@@ -1,94 +1,154 @@
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QPushButton, QListWidget, QLineEdit,
-    QLabel, QMessageBox, QHBoxLayout
+    QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem,
+    QLabel, QTextEdit, QPushButton, QSplitter
 )
-
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPalette, QColor, QFont
 from users.user_manager import UserManager
+from notes.note_manager import NoteManager
+
 
 class AdminPanel(QWidget):
-    def __init__(self):
+    def __init__(self, master_password):
         super().__init__()
-        self.setWindowTitle("Админ-панель пользователей")
-        self.user_manager = UserManager()
+        self.setWindowTitle("Админ-панель")
+        self.resize(1000, 600)
 
-        # Основной layout
-        layout = QVBoxLayout()
+        self.master_password = master_password
+        self.user_manager = UserManager(master_key=master_password)
+        self.note_manager_cache = {}  # кэш NoteManager'ов
+        self.users_data = {}  # username -> encrypted_password
 
-        # Заголовок
-        layout.addWidget(QLabel("Список пользователей:"))
+        self.set_dark_theme()
 
-        # Список пользователей
-        self.user_list = QListWidget()
-        layout.addWidget(self.user_list)
+        self.users_list = QListWidget()
+        self.users_list.setMinimumWidth(250)
+        self.users_list.itemClicked.connect(self.load_user_notes)
 
-        # Кнопки удаления и обновления
-        btn_layout = QHBoxLayout()
+        self.notes_view = QTextEdit()
+        self.notes_view.setReadOnly(True)
 
-        self.refresh_button = QPushButton("Обновить список")
+        self.info_label = QLabel("Выберите пользователя для просмотра заметок и пароля")
+        self.info_label.setFont(QFont("Segoe UI", 10))
+        self.info_label.setStyleSheet("padding: 5px;")
+
+        self.refresh_button = QPushButton("🔄 Обновить список")
         self.refresh_button.clicked.connect(self.load_users)
-        btn_layout.addWidget(self.refresh_button)
 
-        self.delete_button = QPushButton("Удалить выбранного")
-        self.delete_button.clicked.connect(self.delete_selected_user)
-        btn_layout.addWidget(self.delete_button)
+        left_panel = QVBoxLayout()
+        left_panel.addWidget(self.refresh_button)
+        left_panel.addWidget(self.users_list)
 
-        layout.addLayout(btn_layout)
+        left_widget = QWidget()
+        left_widget.setLayout(left_panel)
 
-        # Добавление нового пользователя (GUI)
-        layout.addWidget(QLabel("Добавить нового пользователя:"))
-        self.new_username = QLineEdit()
-        self.new_username.setPlaceholderText("Имя пользователя")
-        layout.addWidget(self.new_username)
+        right_panel = QVBoxLayout()
+        right_panel.addWidget(self.info_label)
+        right_panel.addWidget(self.notes_view)
 
-        self.new_password = QLineEdit()
-        self.new_password.setPlaceholderText("Пароль")
-        self.new_password.setEchoMode(QLineEdit.Password)
-        layout.addWidget(self.new_password)
+        right_widget = QWidget()
+        right_widget.setLayout(right_panel)
 
-        self.admin_checkbox = QPushButton("Добавить как администратора")
-        self.admin_checkbox.setCheckable(True)
-        layout.addWidget(self.admin_checkbox)
+        splitter = QSplitter(Qt.Horizontal)
+        splitter.addWidget(left_widget)
+        splitter.addWidget(right_widget)
+        splitter.setStretchFactor(1, 1)
 
-        self.add_button = QPushButton("Создать пользователя")
-        self.add_button.clicked.connect(self.add_user)
-        layout.addWidget(self.add_button)
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(splitter)
+        self.setLayout(main_layout)
 
-        self.setLayout(layout)
         self.load_users()
 
+    def set_dark_theme(self):
+        palette = QPalette()
+        palette.setColor(QPalette.Window, QColor(30, 30, 30))
+        palette.setColor(QPalette.WindowText, Qt.white)
+        palette.setColor(QPalette.Base, QColor(40, 40, 40))
+        palette.setColor(QPalette.Text, Qt.white)
+        palette.setColor(QPalette.Button, QColor(60, 60, 60))
+        palette.setColor(QPalette.ButtonText, Qt.white)
+        palette.setColor(QPalette.Highlight, QColor(100, 100, 255))
+        palette.setColor(QPalette.HighlightedText, Qt.black)
+        self.setPalette(palette)
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #1e1e1e;
+                color: #ffffff;
+                font-family: Segoe UI, sans-serif;
+                font-size: 14px;
+            }
+            QListWidget {
+                background-color: #2b2b2b;
+                border: 1px solid #3c3c3c;
+                border-radius: 6px;
+            }
+            QTextEdit {
+                background-color: #2b2b2b;
+                border: 1px solid #3c3c3c;
+                border-radius: 6px;
+                padding: 8px;
+            }
+            QPushButton {
+                background-color: #444;
+                color: white;
+                border-radius: 6px;
+                padding: 6px;
+            }
+            QPushButton:hover {
+                background-color: #555;
+            }
+        """)
+
     def load_users(self):
-        self.user_list.clear()
+        self.users_list.clear()
+        self.users_data = {}
         users = self.user_manager.get_all_users()
-        for u in users:
-            is_admin = "[admin]" if u['is_admin'] else ""
-            self.user_list.addItem(f"{u['username']} {is_admin}")
+        for user in users:
+            username = user['username']
+            encrypted_pw = user['password_encrypted']
+            is_admin = user['is_admin']
+            try:
+                decrypted_pw = self.user_manager.decrypt_password(encrypted_pw)
+            except Exception:
+                decrypted_pw = "[Ошибка расшифровки]"
 
-    def delete_selected_user(self):
-        selected = self.user_list.currentItem()
-        if selected:
-            username = selected.text().split()[0]
-            if username == "admin":
-                QMessageBox.warning(self, "Ошибка", "Нельзя удалить пользователя admin")
-                return
-            self.user_manager.delete_user(username)
-            QMessageBox.information(self, "Успешно", f"Пользователь {username} удалён")
-            self.load_users()
+            self.users_data[username] = {
+                'encrypted': encrypted_pw,
+                'decrypted': decrypted_pw
+            }
 
-    def add_user(self):
-        username = self.new_username.text().strip()
-        password = self.new_password.text().strip()
-        is_admin = self.admin_checkbox.isChecked()
+            label = f"{username} (админ)" if is_admin else username
+            item = QListWidgetItem(label)
+            item.setData(Qt.UserRole, username)
+            self.users_list.addItem(item)
 
-        if not username or not password:
-            QMessageBox.warning(self, "Ошибка", "Заполните все поля")
-            return
 
-        success = self.user_manager.add_user(username, password, is_admin)
-        if success:
-            QMessageBox.information(self, "Успешно", f"Пользователь {username} создан")
-            self.load_users()
-            self.new_username.clear()
-            self.new_password.clear()
-            self.admin_checkbox.setChecked(False)
-        else:
-            QMessageBox.warning(self, "Ошибка", f"Пользователь {username} уже существует")
+    def load_user_notes(self, item):
+        username = item.data(Qt.UserRole)
+        db_path = f"databases/{username}.db"
+
+        try:
+            user_info = self.users_data.get(username)
+            decrypted_pw = user_info['decrypted']
+
+            if username not in self.note_manager_cache:
+                self.note_manager_cache[username] = NoteManager(decrypted_pw, db_path)
+
+            note_manager = self.note_manager_cache[username]
+            notes = note_manager.get_all_notes()
+
+            if notes:
+                output = f"Заметки пользователя {username}:\n\n"
+                for note in notes:
+                    output += f"📌 {note['title']}\n{note['content']}\n{'-' * 40}\n"
+            else:
+                output = f"У пользователя {username} нет заметок."
+
+            self.info_label.setText(f"Пользователь: {username} | Пароль: {decrypted_pw}")
+            self.notes_view.setText(output)
+
+        except Exception as e:
+            self.info_label.setText(f"[Ошибка] Не удалось загрузить данные: {e}")
+            self.notes_view.clear()
+
