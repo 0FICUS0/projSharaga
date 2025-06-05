@@ -18,7 +18,8 @@ class AdminPanel(QWidget):
         self.user_manager = UserManager(master_key=master_password)
         self.note_manager_cache = {}  # кэш NoteManager'ов
         self.users_data = {}  # username -> encrypted_password
-        self.on_close_callback = on_close_callback
+        
+        print("[DEBUG] AdminPanel master password:", self.master_password)
 
         self.set_dark_theme()
 
@@ -35,6 +36,8 @@ class AdminPanel(QWidget):
 
         self.refresh_button = QPushButton("🔄 Обновить список")
         self.refresh_button.clicked.connect(self.load_users)
+
+        self.on_close_callback = on_close_callback
 
         left_panel = QVBoxLayout()
         left_panel.addWidget(self.refresh_button)

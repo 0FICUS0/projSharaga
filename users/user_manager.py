@@ -94,3 +94,5 @@ class UserManager:
                 'is_admin': bool(row[2])
             } for row in rows
         ]
+
+    

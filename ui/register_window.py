@@ -13,7 +13,7 @@ class RegisterWindow(QWidget):
         self.resize(400, 320)
 
 
-        self.on_close_callback = on_close_callback
+        
         self.user_manager = user_manager
         self.on_register_success = on_register_success
 
@@ -61,6 +61,8 @@ class RegisterWindow(QWidget):
         layout.addWidget(self.register_button)
         layout.addStretch()
         self.setLayout(layout)
+
+        self.on_close_callback = on_close_callback
 
     def register_user(self):
         username = self.username_input.text().strip()

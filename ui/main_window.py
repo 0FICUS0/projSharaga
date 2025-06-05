@@ -11,7 +11,7 @@ class MainWindow(QWidget):
     def __init__(self, note_manager, username, on_close_callback):
         super().__init__()
         self.note_manager = note_manager
-        self.on_close_callback = on_close_callback
+        
         self.username = username
         self.setWindowTitle("Encrypted Notes - Obsidian Style")
         self.resize(1000, 600)
@@ -80,6 +80,10 @@ class MainWindow(QWidget):
 
         self.current_note_id = None
         self.refresh_notes_list()
+
+
+        #Закрытие окна
+        self.on_close_callback = on_close_callback
 
     def set_dark_theme(self):
         palette = QPalette()
