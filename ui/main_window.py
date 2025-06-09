@@ -13,7 +13,7 @@ class MainWindow(QWidget):
         self.note_manager = note_manager
         
         self.username = username
-        self.setWindowTitle("Encrypted Notes - Obsidian Style")
+        self.setWindowTitle("Главное Окно")
         self.resize(1000, 600)
 
         self.set_dark_theme()
